@@ -13,8 +13,11 @@ To reproduce the analysis, please follow these instructions:
    * Run the following command: `conda env create -f environment.yml`
 4. Activate the environment you've just created:  
    Run the following command: `conda activate gccr002`
+
+Then to work in the browser:
 5. Open Jupyter:  
-   Run the following command: `jupyter-notebook` which should open your webbrowser
-6. Run the `pre-analysis` and then the `main` analysis notebooks:
-   * Click on the corresponding `.ipynb` file
-   * Click on `Cell > Run All`
+   Run the following shell command: `jupyter-notebook` which should open your webbrowser
+6. In the Jupyter web application run the `main.ipynb`.
+   
+Or to simply produce the notebook from the command line:
+5. Run the following shell command: `jupyter nbconvert --to notebook --ExecutePreprocessor.timeout=99999 --execute main.ipynb`
