@@ -1,8 +1,8 @@
 # GCCR002
 
-Analysis and code for the paper "Recent smell loss is the best predictor of COVID-19: a preregistered, cross-sectional study". 
+Analysis and code for the paper "Recent smell loss is the best predictor of COVID-19: a preregistered, cross-sectional study". by Gerkin et al 2020.
 
-To reproduce the analysis, we suggest to useing conda to match the dependencies used with the project. Please follow these instructions:
+To reproduce the analysis, we suggest using conda to match the dependencies used with the project. Please follow these instructions:
 
 ### Using Conda:
 
