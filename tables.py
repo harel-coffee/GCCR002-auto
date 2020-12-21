@@ -5,13 +5,23 @@ CONTEXT = None
 
 def save_table(df, name):
     if True:
-        path = pathlib.Path('tables')
+        path = pathlib.Path('figures') / 'tables'
+        if isinstance(CONTEXT, int):
+            path = path / ('Table %d' % CONTEXT)
+        elif isinstance(CONTEXT, str):
+            if CONTEXT.isnumeric():
+                path = path / ('Table %s' % CONTEXT)
+            elif CONTEXT[0]=='S' and CONTEXT[1:].isnumeric():
+                path = path / ('Table %s' % CONTEXT)
+            else:
+                path = path / CONTEXT
         path.mkdir(exist_ok=True, parents=True)
         try:
             df.to_csv(path / ('%s.csv' % name))
         except:
             df.data.to_csv(path / ('%s.csv' % name))
-    
+
+
 def auto_save_table(func):
     def wrapper(*args, **kwargs):
         df = func(*args, **kwargs)
@@ -267,3 +277,28 @@ def yougov_odds_ratios():
         f = format_.get(col, '%.3g')
         yougov_country_ors[col] = yougov_country_ors[col].apply(lambda x: f%x)
     return yougov_country_ors.sort_index()
+
+
+@auto_save_table
+def symptoms_by_status(df, statuses, dtype, classes, formatting='.%3g', drop_features=None):
+    features = []
+    for pattern in feature_ontology[dtype]:
+        r = re.compile(pattern)
+        features += list(filter(r.search, list(df)))
+    features = list(set(features))
+    df = status_map(df, statuses, "COVID-19 Status")
+    mean = df.groupby('COVID-19 Status').mean()[features].T
+    mean = mean.applymap(lambda x: formatting % x)
+    std = df.groupby('COVID-19 Status').std()[features].T
+    std = std.applymap(lambda x: ' +/- %.3g' % x)
+    for feature in features:
+        try:
+            if classes['dtypes'][feature] in ['continuous', 'discrete']:
+                mean.loc[feature] += std.loc[feature]
+        except:
+            pass
+    mean.index = mean.index.map(nicify)
+    if drop_features:
+        mean = mean.drop(drop_features)
+    return mean.sort_index()
+    

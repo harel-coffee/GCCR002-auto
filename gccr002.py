@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 import pathlib
 import pickle
+import pingouin
 import re
 from scipy.special import logit
 from scipy.stats import ks_2samp, mannwhitneyu, wilcoxon, gaussian_kde, chi2_contingency, entropy, norm
@@ -35,8 +36,10 @@ from statsmodels.discrete.discrete_model import Logit
 import sys
 sys.path.append('/home/rgerkin/dev/pyvenn')  #TODO: Turn pyvenn into a pip-installable package
 from tqdm.auto import tqdm, trange
+import urllib
 from venn import venn3, venn4, venn5, get_labels
 import warnings
+import zipfile
 
 sns.set(font_scale=1.1)
 sns.set_style('whitegrid')
@@ -717,8 +720,8 @@ def joint_plot(df, x, y, restrict, label, maxx=1e-3, cmap='Reds', cbar=False, ax
     x_range = (np.min(df[x]), np.max(df[x]))
     y_range = (np.min(df[y]), np.max(df[y]))
     ax = sns.kdeplot(data[x], data[y], shade=True, clip=[x_range, y_range],
-                     vmin=0, vmax=maxx, cmap=cmap, shade_lowest=False, alpha=0.5,
-                     ax=ax, n_levels=30, cbar=True,
+                     vmin=0, vmax=maxx, cmap=cmap, shade_lowest=True, alpha=0.5,
+                     ax=ax, n_levels=100, cbar=True,
                      cbar_kws={'format': '%.2g',
                                'label': 'Probability density (x1000)',
                                'shrink': 0.8})
@@ -963,14 +966,32 @@ def yg_week(df_gccr, offset=0, how='Onset_day'):
     return 1 + ((df_gccr[how].astype(int) - days)/7).astype(int).clip(0, 9999)
 
 
+def download_unzip_df(url):
+    filehandle, _ = urllib.request.urlretrieve(url)
+    zip_file_object = zipfile.ZipFile(filehandle, 'r')
+    first_file = zip_file_object.namelist()[0]
+    file = zip_file_object.open(first_file)
+    return pd.read_csv(file, encoding='latin1', dtype='object')
+
+
 def download_yougov():
     url = 'https://raw.githubusercontent.com/YouGov-Data/covid-19-tracker/master'
     yg_countries = pd.read_csv('%s/countries.csv' % url, header=None)[0]
     path = pathlib.Path('data/yougov')
     path.mkdir(parents=True, exist_ok=True)
     for country in tqdm(yg_countries):
-        yg = pd.read_csv('%s/data/%s.csv' % (url, country.replace(' ', '-').replace('emerites', 'emirates')),
+        file_url = '%s/data/%s.csv' % (url, country.replace(' ', '-').replace('emerites', 'emirates'))
+        #print(file_name)
+        try:
+            yg = pd.read_csv(file_url,
                          encoding='latin1', dtype='object')
+        except:
+            try:
+                zip_file_url = file_url[:-4]+'.zip'
+                print(zip_file_url)
+                yg = download_unzip_df(zip_file_url)
+            except:
+                raise Exception("Could not download or read %s" % file_name)
         yg.to_csv(path / ('yougov_%s.csv' % country))
     return yg_countries
 
@@ -1160,7 +1181,7 @@ def single_plot(single_aucs, single_xrange, n_features, classes, figsize=(10, 6)
         ax = plt.gca()
     feature_names = list(single_aucs.index)
     ax.plot(single_aucs, feature_names, 'ko', markersize=10)
-    ax.hlines(y=range(n_features), xmin=single_xrange[0], xmax=single_aucs,
+    ax.hlines(y=range(n_features), xmin=single_xrange[0], xmax=single_xrange[1],
                color='gray', alpha=0.2, linewidth=5)
     ax.set_ylim(n_features-0.5, -0.5)
     ax.set_xlim(*single_xrange)
@@ -1278,3 +1299,40 @@ def tranche_compare(clf, X, y, s):
         s,
         ["gccr1", "gccr2", "gccr3"],
     )
+
+    
+def anova(df, dv, between, ss_type=3):
+    if not isinstance(between, list):
+        between = [between]
+    df_anova = df.rename(columns={col: col.replace(' ', '_') for col in df})  # Pingouin can't handle the blank space
+    cols = list(set([dv] + between + ['COVID_Status']))
+    df_anova['COVID_Status'] = 1*(df_anova['COVID_Status']=='C19+')
+    df_anova = df_anova[cols]
+    df_anova[:] = StandardScaler().fit_transform(df_anova)
+    return pingouin.anova(data=df_anova, dv=dv, between=between, ss_type=ss_type)
+
+
+def author_roles():
+    authors = pd.read_csv('data/processed/author_roles.csv', encoding='latin1')
+    authors.index = authors['name'].apply(lambda x: x[0]+'. ') + authors['lastname']
+    authors.index.name = 'first_initial_last_name'
+    authors.columns = authors.columns.map(lambda x: x.replace('\x96', ' '))
+    old_tasks = [x for x in authors.columns if x.upper()==x]
+    tasks = [x.title().replace('_', ' ') for x in old_tasks]
+    authors = authors.rename(columns = dict(zip(old_tasks, tasks)))
+    authors = authors[~authors.index.duplicated()]
+    authors = authors.sort_values('lastname')
+    tasks_short = {'Conceptualization': 'C', 'Methodology': 'M', 'Data Curation': 'D', 'Formal Analysis': 'A',
+                   'Funding Acquisition': 'F', 'Investigation': 'I', 'Project Administration': 'A', 'Resources': 'R',
+                   'Software': 'S', 'Supervision': 'U', 'Validation': 'L', 'Visualization': 'V', 'Writing Original Draft': 'W', 'Writing Review Editing': 'E'}
+    tasks_short = pd.Series(tasks_short)
+    for person in authors.index:
+        their_tasks = authors.loc[person, tasks]
+        performed = their_tasks[their_tasks>0].index
+        authors.loc[person, 'contributions'] = ''.join(tasks_short[performed].values)
+        authors.loc[person, 'n_contributions'] = len(authors.loc[person, 'contributions'])
+    authors = authors.reset_index().sort_values(['n_contributions', 'first_initial_last_name'], ascending=[0, 1]).set_index('first_initial_last_name')
+    credit = 'Author contributions are described according to the following single letter codes: %s. Author contributions are as follows: ' % tasks_short.to_dict()
+    for person in authors.index:
+        credit += f"{person}: {authors.loc[person, 'contributions']}; "
+    print(credit)

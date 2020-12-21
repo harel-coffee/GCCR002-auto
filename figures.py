@@ -967,7 +967,6 @@ def feature_vs_days(df, s, restrict=None, features=["Smell_change_illness", "Sme
     # ax[0].set_title("C19+")
     # ax[0, 1].set_title("C19-")
     ax.set_xlabel("Days Since Onset")
-    ax.set_xlabel("Days Since Onset")
     # ax[3, 1].set_xlabel("Days Since Onset")
     ax.set_ylabel(nicify(features[0]), color='blue')
     if len(features)>1:
@@ -1030,3 +1029,9 @@ def c19_by_country(df, s):
     ax[1].set_xlabel('C19+ / (C19+ and C19-)')
     ax[1].set_yticklabels(['%s (%d)' % (country.title(), n[country]) for country in x])
     plt.tight_layout()
+    
+    
+
+    
+    
+    
