@@ -17,8 +17,8 @@ Please follow these instructions:
 4. Activate the environment you've just created:  
    Run the following command: `conda activate gccr002`
 5. Execute the notebook by either:
-  - Running the shell command: `jupyter-notebook` which should open your webbrowser, then in the Jupyter web application run the `main.ipynb` notebook.
-  - *Or* running the shell command: `jupyter nbconvert --to notebook --ExecutePreprocessor.timeout=99999 --execute main.ipynb` to bypass the browser and execute the notebook programatically.
+  * Running the shell command: `jupyter-notebook` which should open your webbrowser, then in the Jupyter web application run the `main.ipynb` notebook.
+  * *Or* running the shell command: `jupyter nbconvert --to notebook --ExecutePreprocessor.timeout=99999 --execute main.ipynb` to bypass the browser and execute the notebook programatically.
 
 
 ## Citation
