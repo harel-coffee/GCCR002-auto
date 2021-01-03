@@ -1,6 +1,6 @@
 # GCCR002
 
-Code for the paper "[Recent smell loss is the best predictor of COVID-19: a preregistered, cross-sectional study". by Gerkin et al 2020](https://doi.org/10.1093/chemse/bjaa081).
+Code for the paper "[Recent smell loss is the best predictor of COVID-19: a preregistered, cross-sectional study](https://doi.org/10.1093/chemse/bjaa081)". by Gerkin et al 2020.
 
 
 ## Getting Started (using conda):
